@@ -46,10 +46,12 @@ public class LaunchTest {
                 assertTrue(web.getSettings().getDomStorageEnabled());
                 assertFalse(web.getSettings().getAllowFileAccess());
                 assertTrue(web.getSettings().getUserAgentString().contains("YesterdayHeadlines/"));
-                web.evaluateJavascript("document.body.innerText", text -> { document.set(text); loaded.countDown(); });
+                web.evaluateJavascript("JSON.stringify({text:document.body.innerText,brand:getComputedStyle(document.querySelector('.brand')).fontFamily,titleState:document.querySelector('[data-brush-text]')?.dataset.fontState||'none'})", text -> { document.set(text); loaded.countDown(); });
             });
             assertTrue(loaded.await(10, java.util.concurrent.TimeUnit.SECONDS));
             assertTrue("Expected the actual reader, got: " + document.get(), document.get().contains("昨日头条"));
+            assertTrue("Fixed UI font must be inline", document.get().contains("Headlines UI Brush"));
+            assertFalse("A title must settle rather than remain hidden", document.get().contains("loading"));
             screenshot("launch.png");
         }
     }

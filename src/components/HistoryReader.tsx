@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowLeft, ArrowRight, Bookmark, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, X } from 'lucide-react';
 import { beijingToday, dateSchema, clampReadingDate, readingDates, formatDate, parseCatalog, rolloverDate, type CatalogResult, type HistoryEvent } from '@/lib/history';
 import { downloadPoster } from '@/lib/poster';
+import BrushText from '@/components/BrushText';
 
 type View = 'today' | 'archive' | 'saved';
 const STORAGE = 'yesterdays-headlines:saved:v2';
@@ -211,7 +212,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
               <article className="lead-story">
                 <div className="story-topline"><span className="story-category">{featured.category}</span><span>{view === 'today' ? `${formatDate(date, false)}这一页` : '我的收藏'}</span>{saveButton(featured)}</div>
                 <div className="story-era"><span>{featured.date.slice(0, 4)}</span><small>年 / {formatDate(featured.date, false)}</small></div>
-                <h2><button onClick={() => openEvent(featured)}>{featured.title}</button></h2>
+                <h2><button onClick={() => openEvent(featured)}><BrushText text={featured.title} /></button></h2>
                 <p className="lead-summary">{featured.summary.split('\n')[0]}</p>
                 <div className="story-foot"><span><Check size={14} />来源：{featured.sources[0].name}</span><button className="read-link" onClick={() => openEvent(featured)}>读这一页<ArrowRight size={17} /></button></div>
               </article>
@@ -230,7 +231,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
       <dialog ref={dialog} className="reader-dialog" aria-labelledby="article-title" onCancel={closeEvent} onClose={() => { if (active) closeEvent(); }} onClick={event => { if (event.target === event.currentTarget) closeEvent(); }}>
         {active && <div className="detail-paper"><div className="detail-toolbar"><span>昨日头条 / 历史日签</span><button onClick={closeEvent} aria-label="关闭文章"><X size={20} /></button></div>
           <div className="detail-date"><span>{active.date.slice(0, 4)}</span><small>{formatDate(active.date, false)} · {active.category}</small></div>
-          <h2 id="article-title">{active.title}</h2><p className="detail-meta">{formatDate(active.date)}<span> / </span>{active.location}</p>
+          <h2 id="article-title"><BrushText text={active.title} /></h2><p className="detail-meta">{formatDate(active.date)}<span> / </span>{active.location}</p>
           <div className="article-body">{active.summary.split('\n\n').map((paragraph, index) => <p key={index}>{paragraph}</p>)}</div>
           <section className="sources"><h3><Check size={16} />这段历史的出处</h3>{active.sources.map(source => <div key={source.url}><a href={source.url} target="_blank" rel="noopener noreferrer"><span>{source.name}<small>记载事件日期：{formatDate(source.date)}</small></span><ExternalLink size={16} /></a>{source.evidence && <blockquote>{source.evidence}</blockquote>}</div>)}<p>{active.verification === 'source-matched' ? '原文日期已匹配 · 摘要由 AI 据来源整理' : '资料经人工核对'} · {active.reviewedAt}</p></section>
           <div className="detail-actions">{saveButton(active, true)}<button className="primary-button" disabled={exporting} onClick={() => exportEvent(active)}><ArrowDownToLine size={17} />{exporting ? '正在生成日签…' : '保存为日签'}</button></div>

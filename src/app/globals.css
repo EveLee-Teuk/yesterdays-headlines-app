@@ -16,7 +16,7 @@
 :root {
   --paper: #f8f5ee; --ink: #272b25; --muted: #77786f; --red: #a7422e; --line: #d9d7cd;
   --serif: 'Noto Serif SC Variable', 'Songti SC', serif;
-  --brush: 'Ma Shan Zheng', 'Noto Serif SC Variable', serif;
+  --brush: 'Headlines UI Brush', 'Ma Shan Zheng', 'Noto Serif SC Variable', serif;
   --sans: 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --background: 42 42% 95%; --foreground: 90 7% 16%; --border: 50 14% 83%;
   --input: 50 14% 83%; --ring: 10 55% 42%; --radius: 0;
@@ -89,6 +89,9 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .story-era small { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
 .lead-story h2 { font: 400 clamp(44px, 5vw, 68px)/1.24 var(--brush); margin: 0 0 27px; letter-spacing: 1px; text-wrap: balance; overflow-wrap: anywhere; }
 .lead-story h2 button, .story-row h2 button { font: inherit; padding: 0; text-align: left; letter-spacing: inherit; }
+.brush-text[data-font-state="loading"] { background: #e8e4d9; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.brush-text[data-font-state="loading"] .brush-glyphs { opacity: 0; }
+.brush-text[data-font-state="fallback"] { font-family: 'Songti SC', SimSun, serif; }
 .lead-summary { font: 400 20px/2 var(--serif); color: #4b5348; margin: 0 0 32px; max-width: 39em; text-align: justify; overflow-wrap: anywhere; }
 .story-foot { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); padding: 21px 0; gap: 18px; }
 .story-foot > span { display: flex; align-items: center; gap: 7px; font-size: 10px; color: var(--muted); line-height: 1.8; }
