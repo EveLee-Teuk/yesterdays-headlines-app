@@ -3,6 +3,10 @@ import { formatDate } from './history';
 
 // Use the same self-hosted typefaces as the reader.
 export async function downloadPoster(event: HistoryEvent) {
+  const native = (window as Window & { HeadlinesAndroid?: { postMessage: (message: string) => void } }).HeadlinesAndroid;
+  if (navigator.userAgent.includes('YesterdayHeadlines/') && !native) {
+    throw new Error('请先更新手机的 Android System WebView，再保存日签图片。');
+  }
   await Promise.all([
     document.fonts.load('400 64px "Ma Shan Zheng"', event.title + '昨日头条'),
     document.fonts.load('400 30px "Noto Serif SC Variable"', event.summary),
@@ -51,10 +55,15 @@ export async function downloadPoster(event: HistoryEvent) {
   y += 45; ctx.fillStyle = '#777064'; ctx.font = `21px ${sans}`;
   for (const line of sources) { ctx.fillText(line, margin, y); y += 32; }
   ctx.fillStyle = '#b3432f'; ctx.font = `22px ${sans}`; ctx.fillText('翻过日历，读到历史。', margin, height - 105);
+  const dataUrl = canvas.toDataURL('image/png');
+  if (native) {
+    native.postMessage(JSON.stringify({ type: 'savePoster', data: dataUrl, filename: `昨日头条-${event.date}.png` }));
+    return dataUrl;
+  }
   const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('生成图片失败，请重试。')), 'image/png'));
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a'); link.href = url; link.download = `昨日头条-${event.date}-${event.id}.png`;
   document.body.appendChild(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
-  return canvas.toDataURL('image/png');
+  return dataUrl;
 }

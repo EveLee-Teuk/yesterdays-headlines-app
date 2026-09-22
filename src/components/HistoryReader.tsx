@@ -127,7 +127,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
   }
   async function exportEvent(event: HistoryEvent) {
     setExporting(true); setNotice('');
-    try { setPosterPreview(await downloadPoster(event)); setNotice('日签已生成，请在浏览器下载中查看。也可长按下方图片保存。'); }
+    try { setPosterPreview(await downloadPoster(event)); setNotice(navigator.userAgent.includes('YesterdayHeadlines/') ? '日签已生成，请在系统窗口选择保存位置。' : '日签已生成，请在浏览器下载中查看。也可长按下方图片保存。'); }
     catch (error) { setNotice(error instanceof Error ? error.message : '日签生成失败，请重试。'); }
     finally { setExporting(false); }
   }
@@ -227,7 +227,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
       <footer className="page-footer"><span>昨日头条 <i>·</i> 你的私人历史日签</span><span>以北京时间翻页 · 以真实日期记事</span></footer>
       {notice && !active && <div className="toast" role="status">{notice}<button aria-label="关闭提示" onClick={() => setNotice('')}><X size={15} /></button></div>}
 
-      <dialog ref={dialog} className="reader-dialog" aria-labelledby="article-title" onCancel={closeEvent} onClick={event => { if (event.target === event.currentTarget) closeEvent(); }}>
+      <dialog ref={dialog} className="reader-dialog" aria-labelledby="article-title" onCancel={closeEvent} onClose={() => { if (active) closeEvent(); }} onClick={event => { if (event.target === event.currentTarget) closeEvent(); }}>
         {active && <div className="detail-paper"><div className="detail-toolbar"><span>昨日头条 / 历史日签</span><button onClick={closeEvent} aria-label="关闭文章"><X size={20} /></button></div>
           <div className="detail-date"><span>{active.date.slice(0, 4)}</span><small>{formatDate(active.date, false)} · {active.category}</small></div>
           <h2 id="article-title">{active.title}</h2><p className="detail-meta">{formatDate(active.date)}<span> / </span>{active.location}</p>

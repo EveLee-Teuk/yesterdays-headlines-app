@@ -6,3 +6,9 @@ node_modules/
 next-env.d.ts
 output/
 .playwright-cli/
+android/.gradle/
+android/**/build/
+android/local.properties
+.signing/
+*.p12
+*.jks

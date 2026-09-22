@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+.launch-screen { position: fixed; inset: 0; z-index: 1000; background: #f8f5ee; color: #272b25; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: max(40px, env(safe-area-inset-top)) 24px max(42px, env(safe-area-inset-bottom)); animation: launch-appear .3s ease-out; }
+.launch-edition { color: #77786f; font: 10px Georgia, serif; letter-spacing: 4px; }
+.launch-center { text-align: center; position: relative; }
+.launch-title { font: 400 clamp(76px, 15vw, 112px)/1.18 var(--brush); letter-spacing: 12px; margin: 22px 0 26px 12px; }
+.launch-seal { display: inline-block; color: #a7422e; border: 1px solid #a7422e; padding: 6px; font: 20px var(--brush); transform: rotate(-5deg); }
+.launch-rule { display: block; width: 32px; height: 1px; background: #a7422e; margin: 0 auto 26px; }
+.launch-motto { font: 16px var(--serif); letter-spacing: 3px; color: #77786f; }
+.launch-skip { padding: 12px 22px; font: 14px var(--serif); color: #a7422e; letter-spacing: 2px; }
+@keyframes launch-appear { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .launch-screen { animation: none; } }
+
 :root {
   --paper: #f8f5ee; --ink: #272b25; --muted: #77786f; --red: #a7422e; --line: #d9d7cd;
   --serif: 'Noto Serif SC Variable', 'Songti SC', serif;
