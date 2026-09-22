@@ -16,3 +16,8 @@ GitHub 数据仓库使用 DeepSeek 和真实搜索自动采集。每日独立保
 Node.js 24；npm ci，然后 npm run dev。
 验证：npm test、npm run typecheck、npm run lint、npm run build。
 沿用 Netlify 原站 https://yesterdays-headlines-app.netlify.app/ ，GitHub main 提交自动部署。前端无需 DeepSeek 密钥；密钥只存在数据仓库的 GitHub Secret。
+
+## 字体与版式
+
+刊名和文章大标题使用 Ma Shan Zheng 毛笔手写体；正文使用 Noto Serif SC 宋体。两套字体通过 Fontsource 自托管，随网站发布，不依赖读者安装字体或连接 Google Fonts。上游 SIL OFL 授权位于 public/fonts/licenses/。
+日签 PNG 使用同样的标题与正文字体，导出前等待对应字形加载。桌面使用日期边栏和宽阅读栏，手机去掉重复日期区；七日目录提供日期大字与文章标题预览。

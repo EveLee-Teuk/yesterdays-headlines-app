@@ -165,10 +165,10 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
     <div className="paper-app">
       <a className="skip-link" href="#reading">跳到阅读内容</a>
       <header className="masthead">
-        <div className="masthead-top"><span>一份给自己的历史日签</span><span>每日一页 · 慢慢读</span></div>
+        <div className="masthead-top"><span>私人藏刊 / THE DAILY HISTORY</span><span>{formatDate(today)} · 北京时间</span></div>
         <div className="brand-row">
           <button className="brand" onClick={() => chooseDate(today)} aria-label="昨日头条，回到今天"><span className="brand-seal">昨日</span><span>昨日头条<small>YESTERDAY’S HEADLINES</small></span></button>
-          <p className="brand-note">翻过日历，<br />读到历史。</p>
+          <p className="brand-note">翻过日历，读到历史。<small>A LITTLE HISTORY, EVERY DAY.</small></p>
         </div>
         <nav className="main-nav" aria-label="主导航">
           <div className="nav-tabs">
@@ -183,7 +183,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
       <main id="reading">
         <div className="section-intro"><div><span className="eyebrow">{view === 'today' ? 'ON THIS DAY' : view === 'archive' ? 'THE ARCHIVE' : 'YOUR COLLECTION'}</span>
           <h1>{view === 'today' ? `${formatDate(date, false)} · 历史日签` : view === 'archive' ? '往日，值得重读。' : '把喜欢的历史留下。'}</h1>
-          <p>{view === 'today' ? '这一页，只收录这一天的历史。' : view === 'archive' ? `最近 ${catalog.retentionDays} 天，每一天单独留存。选择日期，打开那一天的日报。` : '这里显示最近日报中收藏的故事；书签保存在当前浏览器。'}</p></div>
+          <p>{view === 'today' ? '在同一个月日，与过去相遇。' : view === 'archive' ? `留住最近 ${catalog.retentionDays} 天，慢慢翻阅。` : '最近日报中，你曾停留的那些故事。书签保存在本机。'}</p></div>
           {view === 'today' && <div className="date-control"><button disabled={date <= firstDate} onClick={() => moveDay(-1)} aria-label="前一天"><ChevronLeft size={17} /></button>
             <label><CalendarDays size={16} /><input aria-label="选择日签日期" type="date" value={date} min={firstDate} max={today} onInput={event => chooseDate(event.currentTarget.value)} onChange={event => chooseDate(event.target.value)} /></label>
             <button disabled={date >= today} onClick={() => moveDay(1)} aria-label="后一天"><ChevronRight size={17} /></button>
@@ -193,19 +193,18 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
         <div className="reading-grid" style={view !== 'today' ? { gridTemplateColumns: '1fr' } : undefined}>
           {view === 'today' && <aside className="calendar-column">
             <section className="date-leaf" aria-label="当前阅读日期">
-              <div className="calendar-pins"><i /><i /></div>
+              <div className="calendar-caption">THE DAY / 这一日</div>
               <div className="leaf-top"><span>{year}</span><span>{Number(month)} 月</span></div>
               <div className="big-day">{day}</div><p className="weekday">{weekday}</p>
               <div className="leaf-line" /><p className="leaf-bottom">日子向前，<br />故事留在这一页。</p>
-              <span className="leaf-stamp">读史</span>
             </section>
             <button className="today-link" onClick={() => chooseDate(today)}><ArrowLeft size={14} />回到今天</button>
-            <div className="editor-note"><span className="eyebrow">编者小记</span><p>有据可查，才值得记住。<br />每一则历史都附上出处，<br />让阅读多一分踏实。</p><span className="note-sign">昨日头条</span></div>
+            <div className="editor-note"><span className="eyebrow">阅读手记 / NOTE</span><p>每一页都留有出处。<br />读到感兴趣的地方，<br />不妨再去原文里看看。</p><span className="note-sign">昨日头条 编辑室</span></div>
           </aside>}
 
           {view === 'archive' ? <section className="archive-days" aria-label="最近日报">{[...dates].reverse().map(day => {
             const archived = catalog.issues.find(item => item.date === day);
-            return <button className="archive-day" key={day} onClick={() => chooseDate(day)}><span>{formatDate(day)}</span><small>{!archived || archived.status === 'unavailable' ? '资料暂不可用' : `${archived.events.length} 则同日往事`}</small><ArrowRight size={16} /></button>;
+            return <button className="archive-day" key={day} aria-label={`阅读${formatDate(day)}日报`} onClick={() => chooseDate(day)}><span className="archive-date"><strong>{day.slice(-2)}</strong><small>{day.slice(0, 4)} / {Number(day.slice(5, 7))} 月</small></span><span className="archive-copy"><small>{day === today ? '今日刊' : '往日刊'} · {!archived || archived.status === 'unavailable' ? '资料暂不可用' : `${archived.events.length} 则往事`}</small><span>{archived?.events[0]?.title || '这一日，暂留空白。'}</span></span><ArrowRight size={19} /></button>;
           })}</section> : <section className="stories" aria-label="历史事件">
             <div className="stories-toolbar"><div className="category-tabs" aria-label="分类筛选">{categories.map(item => <button key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div><span className="story-count">{visible.length} 则{view === 'today' ? '同日往事' : '已收录往事'}</span></div>
             {featured ? <>
@@ -215,11 +214,10 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
                 <h2><button onClick={() => openEvent(featured)}>{featured.title}</button></h2>
                 <p className="lead-summary">{featured.summary.split('\n')[0]}</p>
                 <div className="story-foot"><span><Check size={14} />来源：{featured.sources[0].name}</span><button className="read-link" onClick={() => openEvent(featured)}>读这一页<ArrowRight size={17} /></button></div>
-                <span className="story-watermark" aria-hidden="true">记</span>
               </article>
               {remaining.length > 0 && <div className="more-heading"><span>继续翻阅</span><div /><small>THEN & NOW</small></div>}
               {remaining.map(event => <article className="story-row" key={event.id}><div className="row-year">{event.date.slice(0, 4)}<small>{formatDate(event.date, false)}</small></div><div className="row-content"><span className="row-category">{event.category} · {event.location}</span><h2><button onClick={() => openEvent(event)}>{event.title}</button></h2><p>{event.summary.split('\n')[0]}</p></div>{saveButton(event)}</article>)}
-              {view === 'today' && <div className="end-note"><span>·</span><p>今天的这一页，读完了。</p><button onClick={() => { setView('archive'); setCategory('全部'); }}>去往日里走走<ArrowRight size={14} /></button></div>}
+              {view === 'today' && <div className="end-note"><span>终</span><p>这一页，读完了。</p><button onClick={() => { setView('archive'); setCategory('全部'); }}>再翻一页<ArrowRight size={14} /></button></div>}
             </> : <div className="empty-state"><BookOpen size={36} strokeWidth={1} /><h2>{view === 'saved' ? '这里，留给你喜欢的故事。' : category !== '全部' ? '这个分类暂时没有内容。' : !issue || issue.status === 'unavailable' ? '这一天的资料，正在等待补齐。' : '这一天，暂留一页空白。'}</h2><p>{view === 'saved' ? '点击文章旁的书签，就能把它收在这里。' : !issue || issue.status === 'unavailable' ? '采集暂未成功，稍后会自动重试。不会用其他日期的内容填补。' : '当天检索未找到通过核验的事件。我们不为填满一页而改写日期。'}</p><button className="primary-button" onClick={() => { setView('archive'); setCategory('全部'); }}>翻阅最近日报<ArrowRight size={16} /></button></div>}
           </section>}
         </div>

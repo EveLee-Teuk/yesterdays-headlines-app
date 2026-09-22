@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import '@fontsource-variable/noto-serif-sc/wght.css';
+import '@fontsource/ma-shan-zheng/400.css';
 import './globals.css';
 export const metadata: Metadata = {
   title: '昨日头条 · 你的私人历史日签',
