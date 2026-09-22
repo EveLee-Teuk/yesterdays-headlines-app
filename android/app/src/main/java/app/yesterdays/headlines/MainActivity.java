@@ -102,7 +102,7 @@ public class MainActivity extends Activity {
         try { title.setTypeface(Typeface.createFromAsset(getAssets(),"brush.ttf")); } catch (RuntimeException ignored) { title.setTypeface(Typeface.SERIF); }
         LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-2,-2); titleParams.setMargins(0,48,0,20); cover.addView(title,titleParams);
         TextView seal = label("日 签",16,RED);
-        GradientDrawable border = new GradientDrawable(); border.setColor(PAPER); border.setStroke(1,RED); seal.setBackground(border); seal.setPadding(14,5,14,5); seal.setRotation(-4); cover.addView(seal);
+        GradientDrawable border = new GradientDrawable(); border.setColor(PAPER); border.setStroke(2,RED); seal.setBackground(border); seal.setTypeface(title.getTypeface()); seal.setPadding(14,8,14,8); seal.setRotation(-4); cover.addView(seal,new LinearLayout.LayoutParams(-2,-2));
         TextView motto = label("翻过日历，读到历史。",16,Color.GRAY); motto.setPadding(0,30,0,24); cover.addView(motto);
         status = label("正在翻开今日…",13,Color.GRAY); cover.addView(status);
         retry = new Button(this); retry.setText("重新翻开"); retry.setTextColor(RED); retry.setVisibility(View.GONE); retry.setOnClickListener(v -> loadHome()); cover.addView(retry);

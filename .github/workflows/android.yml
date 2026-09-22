@@ -35,7 +35,7 @@ jobs:
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
           mkdir -p delivery
-          cp android/app/build/outputs/apk/release/app-release.apk delivery/yesterday-headlines-1.0.0.apk
+          cp android/app/build/outputs/apk/release/app-release.apk delivery/yesterday-headlines-1.0.1.apk
           sha256sum delivery/*.apk > delivery/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
