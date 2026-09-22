@@ -5,6 +5,14 @@ import { useEffect, useState } from 'react';
 export default function LaunchScreen() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
+    if (!visible) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const reader = document.getElementById('reader-shell');
+    if (reader) reader.inert = true;
+    return () => { document.body.style.overflow = previous; if (reader) reader.inert = false; };
+  }, [visible]);
+  useEffect(() => {
     if (navigator.userAgent.includes('YesterdayHeadlines/')) return;
     try {
       if (sessionStorage.getItem('headlines-welcome')) return;

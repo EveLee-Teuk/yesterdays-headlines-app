@@ -1,13 +1,13 @@
 <resources>
-    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="BaseAppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:colorAccent">#A7422E</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:statusBarColor">#F8F5EE</item>
-        <item name="android:navigationBarColor">#F8F5EE</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:navigationBarColor">#272B25</item>
         <item name="android:windowBackground">#F8F5EE</item>
     </style>
+    <style name="AppTheme" parent="BaseAppTheme" />
     <style name="LaunchTheme" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#F8F5EE</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher</item>

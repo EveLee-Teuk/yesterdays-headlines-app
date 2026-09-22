@@ -8,5 +8,5 @@ export const metadata: Metadata = {
   description: '翻过日历，读到历史。阅读有出处的历史往事，收藏并保存属于自己的每日历史日签。',
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="zh-CN"><body><LaunchScreen />{children}</body></html>;
+  return <html lang="zh-CN"><body><LaunchScreen /><div id="reader-shell">{children}</div></body></html>;
 }

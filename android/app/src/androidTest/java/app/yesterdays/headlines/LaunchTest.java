@@ -12,6 +12,12 @@ import static org.junit.Assert.*;
 
 @RunWith(AndroidJUnit4.class)
 public class LaunchTest {
+    private void screenshot(String name) throws Exception {
+        android.graphics.Bitmap shot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
+        assertNotNull(shot);
+        java.io.File file=new java.io.File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null),name);
+        try(java.io.FileOutputStream stream=new java.io.FileOutputStream(file)){shot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}
+    }
     private WebView findWeb(View view) {
         if (view instanceof WebView) return (WebView)view;
         if (view instanceof ViewGroup) {
@@ -22,6 +28,7 @@ public class LaunchTest {
     }
     @Test public void opensProductionReaderWithRestrictedWebView() throws Exception {
         try (ActivityScenario<MainActivity> scenario=ActivityScenario.launch(MainActivity.class)) {
+            screenshot("splash.png");
             Thread.sleep(15000);
             java.util.concurrent.CountDownLatch loaded = new java.util.concurrent.CountDownLatch(1);
             java.util.concurrent.atomic.AtomicReference<String> document = new java.util.concurrent.atomic.AtomicReference<>("");
@@ -36,10 +43,7 @@ public class LaunchTest {
             });
             assertTrue(loaded.await(10, java.util.concurrent.TimeUnit.SECONDS));
             assertTrue("Expected the actual reader, got: " + document.get(), document.get().contains("昨日头条"));
-            android.graphics.Bitmap shot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
-            assertNotNull(shot);
-            java.io.File file=new java.io.File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null),"launch.png");
-            try(java.io.FileOutputStream stream=new java.io.FileOutputStream(file)){shot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}
+            screenshot("launch.png");
         }
     }
 }
