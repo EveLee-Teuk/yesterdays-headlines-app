@@ -47,3 +47,10 @@ button{transition:color .18s,background .18s,transform .18s}button:hover{color:v
 
 .detail-notice{font-size:12px;line-height:1.8;padding:12px 15px;background:#eeece2;color:var(--red)}
 .poster-preview{margin:22px auto 0;max-width:340px}.poster-preview img{width:100%;height:auto;border:1px solid var(--line)}
+.archive-days { display: grid; gap: 12px; }
+.archive-day { display: flex; align-items: center; gap: 18px; border: 1px solid var(--line, #d8d3c7); padding: 24px; background: #fbf9f1; text-align: left; }
+.archive-day span { font-family: var(--font-serif, serif); font-size: 22px; flex: 1; }
+.archive-day small { color: #77756c; }
+.archive-day:hover { border-color: #ad4935; }
+.date-control button:disabled { opacity: .3; cursor: not-allowed; }
+@media(max-width: 600px) { .archive-day { padding: 18px 14px; gap: 10px; } .archive-day span { font-size: 18px; } }

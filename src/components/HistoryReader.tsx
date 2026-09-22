@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowLeft, ArrowRight, Bookmark, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, X } from 'lucide-react';
-import { beijingToday, dateSchema, eventsOnDay, formatDate, parseCatalog, rolloverDate, type CatalogResult, type HistoryEvent } from '@/lib/history';
+import { beijingToday, dateSchema, clampReadingDate, readingDates, formatDate, parseCatalog, rolloverDate, type CatalogResult, type HistoryEvent } from '@/lib/history';
 import { downloadPoster } from '@/lib/poster';
 
 type View = 'today' | 'archive' | 'saved';
@@ -23,6 +23,12 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
   const [posterPreview, setPosterPreview] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
   const { catalog, origin } = data;
+  const dates = readingDates(today, catalog.retentionDays);
+  const firstDate = dates[0];
+  const eligibleEvents = useMemo(() => {
+    const allowed = readingDates(today, catalog.retentionDays);
+    return catalog.issues.filter(issue => allowed.includes(issue.date)).flatMap(issue => issue.events);
+  }, [catalog, today]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,7 +57,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
     const syncDate = () => {
       const next = beijingToday();
       if (next === today) return;
-      const selected = rolloverDate(date, today, next);
+      const selected = clampReadingDate(rolloverDate(date, today, next), next, catalog.retentionDays);
       setToday(next);
       if (selected !== date) {
         setDate(selected);
@@ -63,20 +69,28 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
     syncDate();
     const timer = setInterval(syncDate, 30000);
     return () => clearInterval(timer);
-  }, [date, today]);
+  }, [date, today, catalog.retentionDays]);
 
   useEffect(() => {
     const restore = () => {
       const params = new URLSearchParams(location.search);
       const selected = params.get('date');
-      if (selected && dateSchema.safeParse(selected).success) setDate(selected);
+      if (selected && dateSchema.safeParse(selected).success) {
+        const allowed = clampReadingDate(selected, beijingToday(), catalog.retentionDays);
+        setDate(allowed);
+        if (allowed !== selected) {
+          const url = new URL(location.href); url.searchParams.set('date', allowed);
+          history.replaceState(null, '', url);
+          setNotice(`仅可阅读最近 ${catalog.retentionDays} 天的日报，已回到今天。`);
+        }
+      }
       const id = params.get('event');
-      setActive(catalog.events.find(event => event.id === id) || null);
-      if (id && !catalog.events.some(event => event.id === id)) setNotice('这篇历史日签暂未收录，先看看其他内容。');
+      setActive(eligibleEvents.find(event => event.id === id) || null);
+      if (id && !eligibleEvents.some(event => event.id === id)) setNotice('这篇日签不在当前保留范围内，请翻阅最近日报。');
     };
     restore(); window.addEventListener('popstate', restore);
     return () => window.removeEventListener('popstate', restore);
-  }, [catalog]);
+  }, [catalog, eligibleEvents]);
 
   useEffect(() => {
     if (active && !dialog.current?.open) dialog.current?.showModal();
@@ -97,7 +111,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
     history.replaceState(null, '', url);
   }
   function chooseDate(value: string) {
-    if (!dateSchema.safeParse(value).success) return;
+    if (!dateSchema.safeParse(value).success || !dates.includes(value)) return;
     setDate(value); setView('today'); setCategory('全部');
     const url = new URL(location.href); url.searchParams.set('date', value); url.searchParams.delete('event');
     history.replaceState(null, '', url);
@@ -130,14 +144,15 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
     finally { setRefreshing(false); }
   }
 
-  const daily = eventsOnDay(catalog.events, date);
-  const source = view === 'today' ? daily : view === 'saved' ? catalog.events.filter(event => saved.includes(event.id)) : catalog.events;
+  const issue = catalog.issues.find(issue => issue.date === date);
+  const daily = issue?.events || [];
+  const source = view === 'saved' ? eligibleEvents.filter(event => saved.includes(event.id)) : daily;
   const visible = source.filter(event => category === '全部' || event.category === category)
     .sort((a, b) => a.date.localeCompare(b.date));
   const [featured, ...remaining] = visible;
   const [year, month, day] = date.split('-');
   const weekday = new Intl.DateTimeFormat('zh-CN', { weekday: 'long', timeZone: 'Asia/Shanghai' }).format(new Date(`${date}T04:00:00Z`));
-  const savedCount = catalog.events.filter(event => saved.includes(event.id)).length;
+  const savedCount = eligibleEvents.filter(event => saved.includes(event.id)).length;
 
   const saveButton = (event: HistoryEvent, full = false) => (
     <button className={`save-button ${saved.includes(event.id) ? 'is-saved' : ''} ${full ? 'full-save' : ''}`} onClick={() => toggleSaved(event)}
@@ -167,16 +182,16 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
 
       <main id="reading">
         <div className="section-intro"><div><span className="eyebrow">{view === 'today' ? 'ON THIS DAY' : view === 'archive' ? 'THE ARCHIVE' : 'YOUR COLLECTION'}</span>
-          <h1>{view === 'today' ? '历史上的今天' : view === 'archive' ? '往日，值得重读。' : '把喜欢的历史留下。'}</h1>
-          <p>{view === 'today' ? '在同一个月日，与过去相遇。' : view === 'archive' ? '按事件发生的年份，翻阅已收录的历史。' : '收藏保存在当前浏览器里，只属于你。'}</p></div>
-          <div className="date-control"><button onClick={() => moveDay(-1)} aria-label="前一天"><ChevronLeft size={17} /></button>
-            <label><CalendarDays size={16} /><input aria-label="选择日签日期" type="date" value={date} min="0001-01-01" max="9999-12-31" onInput={event => chooseDate(event.currentTarget.value)} onChange={event => chooseDate(event.target.value)} /></label>
-            <button onClick={() => moveDay(1)} aria-label="后一天"><ChevronRight size={17} /></button>
-          </div>
+          <h1>{view === 'today' ? `${formatDate(date, false)} · 历史日签` : view === 'archive' ? '往日，值得重读。' : '把喜欢的历史留下。'}</h1>
+          <p>{view === 'today' ? '这一页，只收录这一天的历史。' : view === 'archive' ? `最近 ${catalog.retentionDays} 天，每一天单独留存。选择日期，打开那一天的日报。` : '这里显示最近日报中收藏的故事；书签保存在当前浏览器。'}</p></div>
+          {view === 'today' && <div className="date-control"><button disabled={date <= firstDate} onClick={() => moveDay(-1)} aria-label="前一天"><ChevronLeft size={17} /></button>
+            <label><CalendarDays size={16} /><input aria-label="选择日签日期" type="date" value={date} min={firstDate} max={today} onInput={event => chooseDate(event.currentTarget.value)} onChange={event => chooseDate(event.target.value)} /></label>
+            <button disabled={date >= today} onClick={() => moveDay(1)} aria-label="后一天"><ChevronRight size={17} /></button>
+          </div>}
         </div>
 
-        <div className="reading-grid">
-          <aside className="calendar-column">
+        <div className="reading-grid" style={view !== 'today' ? { gridTemplateColumns: '1fr' } : undefined}>
+          {view === 'today' && <aside className="calendar-column">
             <section className="date-leaf" aria-label="当前阅读日期">
               <div className="calendar-pins"><i /><i /></div>
               <div className="leaf-top"><span>{year}</span><span>{Number(month)} 月</span></div>
@@ -186,13 +201,16 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
             </section>
             <button className="today-link" onClick={() => chooseDate(today)}><ArrowLeft size={14} />回到今天</button>
             <div className="editor-note"><span className="eyebrow">编者小记</span><p>有据可查，才值得记住。<br />每一则历史都附上出处，<br />让阅读多一分踏实。</p><span className="note-sign">昨日头条</span></div>
-          </aside>
+          </aside>}
 
-          <section className="stories" aria-label="历史事件">
+          {view === 'archive' ? <section className="archive-days" aria-label="最近日报">{[...dates].reverse().map(day => {
+            const archived = catalog.issues.find(item => item.date === day);
+            return <button className="archive-day" key={day} onClick={() => chooseDate(day)}><span>{formatDate(day)}</span><small>{!archived || archived.status === 'unavailable' ? '资料暂不可用' : `${archived.events.length} 则同日往事`}</small><ArrowRight size={16} /></button>;
+          })}</section> : <section className="stories" aria-label="历史事件">
             <div className="stories-toolbar"><div className="category-tabs" aria-label="分类筛选">{categories.map(item => <button key={item} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}</div><span className="story-count">{visible.length} 则{view === 'today' ? '同日往事' : '已收录往事'}</span></div>
             {featured ? <>
               <article className="lead-story">
-                <div className="story-topline"><span className="story-category">{featured.category}</span><span>{view === 'today' ? '今日一读' : '历史拾页'}</span>{saveButton(featured)}</div>
+                <div className="story-topline"><span className="story-category">{featured.category}</span><span>{view === 'today' ? `${formatDate(date, false)}这一页` : '我的收藏'}</span>{saveButton(featured)}</div>
                 <div className="story-era"><span>{featured.date.slice(0, 4)}</span><small>年 / {formatDate(featured.date, false)}</small></div>
                 <h2><button onClick={() => openEvent(featured)}>{featured.title}</button></h2>
                 <p className="lead-summary">{featured.summary.split('\n')[0]}</p>
@@ -202,8 +220,8 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
               {remaining.length > 0 && <div className="more-heading"><span>继续翻阅</span><div /><small>THEN & NOW</small></div>}
               {remaining.map(event => <article className="story-row" key={event.id}><div className="row-year">{event.date.slice(0, 4)}<small>{formatDate(event.date, false)}</small></div><div className="row-content"><span className="row-category">{event.category} · {event.location}</span><h2><button onClick={() => openEvent(event)}>{event.title}</button></h2><p>{event.summary.split('\n')[0]}</p></div>{saveButton(event)}</article>)}
               {view === 'today' && <div className="end-note"><span>·</span><p>今天的这一页，读完了。</p><button onClick={() => { setView('archive'); setCategory('全部'); }}>去往日里走走<ArrowRight size={14} /></button></div>}
-            </> : <div className="empty-state"><BookOpen size={36} strokeWidth={1} /><h2>{view === 'saved' ? '这里，留给你喜欢的故事。' : category !== '全部' ? '这个分类暂时没有内容。' : '这一天，暂留一页空白。'}</h2><p>{view === 'saved' ? '点击文章旁的书签，就能把它收在这里。' : '尚未收录符合条件的已核对事件。我们不为填满一页而改写日期。'}</p><button className="primary-button" onClick={() => { setView('archive'); setCategory('全部'); }}>翻阅已收录的历史<ArrowRight size={16} /></button></div>}
-          </section>
+            </> : <div className="empty-state"><BookOpen size={36} strokeWidth={1} /><h2>{view === 'saved' ? '这里，留给你喜欢的故事。' : category !== '全部' ? '这个分类暂时没有内容。' : !issue || issue.status === 'unavailable' ? '这一天的资料，正在等待补齐。' : '这一天，暂留一页空白。'}</h2><p>{view === 'saved' ? '点击文章旁的书签，就能把它收在这里。' : !issue || issue.status === 'unavailable' ? '采集暂未成功，稍后会自动重试。不会用其他日期的内容填补。' : '当天检索未找到通过核验的事件。我们不为填满一页而改写日期。'}</p><button className="primary-button" onClick={() => { setView('archive'); setCategory('全部'); }}>翻阅最近日报<ArrowRight size={16} /></button></div>}
+          </section>}
         </div>
 
         <div className="edition-note"><span>{origin === 'bundled' ? '在线内容暂不可用，显示内置资料' : catalog.lastRun?.date === today ? '今日检索已完成' : '等待今日资料更新'} · 最近更新 {catalog.lastRun?.date || catalog.updatedAt} · 已收录 {catalog.events.length} 则</span><button disabled={refreshing} onClick={refresh}><RefreshCw size={13} className={refreshing ? 'spinning' : ''} />{refreshing ? '正在刷新' : '刷新内容'}</button></div>

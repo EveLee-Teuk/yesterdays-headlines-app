@@ -42,3 +42,14 @@ test('history contract and anniversary regressions', async (t) => {
     assert.throws(() => eventsOnDay(catalog.events, '2026-02-30'));
   });
 });
+
+test('dated issues reject unrelated months and restrict the reading window', async () => {
+  const { parseIssue, readingDates, clampReadingDate } = await import(modulePath.href);
+  const issue = { schemaVersion: 2, date: '2026-09-22', timezone: 'Asia/Shanghai', status: 'ready', events: [fixture.events.find(e => e.id === 'beijing-asian-games')] };
+  assert.equal(parseIssue(issue).events.length, 1);
+  assert.throws(() => parseIssue({ ...issue, events: [fixture.events.find(e => e.id === 'three-gorges-start')] }));
+  assert.deepEqual(readingDates('2026-09-22', 7), ['2026-09-16','2026-09-17','2026-09-18','2026-09-19','2026-09-20','2026-09-21','2026-09-22']);
+  assert.equal(clampReadingDate('2026-09-23', '2026-09-22', 7), '2026-09-22');
+  assert.equal(clampReadingDate('2026-09-15', '2026-09-22', 7), '2026-09-22');
+  assert.equal(clampReadingDate('2026-09-16', '2026-09-22', 7), '2026-09-16');
+});

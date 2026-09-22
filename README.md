@@ -1,29 +1,18 @@
-# 昨日头条 · 个人历史日签
+# 昨日头条 · 七日历史日签
 
-暖白报刊风的个人阅读应用：按日读历史、看出处、收藏事件、导出带日期和来源的 PNG 日签。
+暖白报刊风的个人历史阅读应用，支持按日期阅读、来源详情、收藏及导出 PNG。
 
-## 运行与验证
+## 使用
 
-Node.js 24：`npm ci`，然后 `npm run dev`。
-验证：`npm test`、`npm run typecheck`、`npm run lint`、`npm run build`。
-生产：`npm start`。
+每日一页只展示所选日报文件的内容。往日拾光列出今天及前六天，共七天；选择日期后日历与内容同步切换，不再混排全库。未来及更早日期不可选，过期链接回到今天。收藏书签保存在本机，仅展示仍在七天范围内的事件。
 
-## 每天自动更新
+## 数据
 
-数据仓库 yesterdays-headlines-data 的 GitHub Action 每天检索真实来源，并使用现有 DEEPSEEK_API_KEY 整理、复核后更新 catalog.json。前端无需密钥。
-服务端读取远端 main/catalog.json，缓存 1 分钟；已打开网页每 5 分钟及重新切回时自动检查，也可手动刷新。每天的数据更新不需要重建网站。
-读取失败或数据不合规范时，显示内置备用资料和明确提示。页面显示最近成功检索日期；未完成当天检索不会标为今日更新。
-自动整理记录附原文短句及来源，人工核对记录单独标示。日期匹配和模型复核不能保证事实零错误，读者可直接查看出处。
+GitHub 数据仓库使用 DeepSeek 和真实搜索自动采集。每日独立保存 archives/YYYY-MM-DD.json，并通过 archive_index.json 提供索引。前端依次读取索引和各日期文件，校验文件日期、事件月日、来源日期、状态；不直接读取全量 catalog.json。
+服务端缓存一分钟，打开页面每五分钟及切回页面时检查，也可手动刷新。线上失败时显示内置资料和明确提示。无合格事件标为空日报，采集失败标为资料暂不可用，两者区分。
 
-## 个人使用
+## 开发部署
 
-北京时间决定今天，按事件真实月日筛选。没有资料的日期保持空白。
-收藏存于当前浏览器 localStorage；清除站点数据会清除收藏。
-网址 date 与 event 参数可直达选定日期和事件。
-PNG 日签在浏览器本地排版，手机可长按预览图保存。
-
-## Netlify
-
-沿用 yesterdays-headlines-app.netlify.app，连接 GitHub main。
-netlify.toml 配置构建 npm run build、发布 .next、Node.js 24；由 Netlify Next.js 适配器提供服务端及 API。
-首次上线先发布数据仓库，再推送前端。之后前端代码提交触发部署，日常数据独立自动更新。
+Node.js 24；npm ci，然后 npm run dev。
+验证：npm test、npm run typecheck、npm run lint、npm run build。
+沿用 Netlify 原站 https://yesterdays-headlines-app.netlify.app/ ，GitHub main 提交自动部署。前端无需 DeepSeek 密钥；密钥只存在数据仓库的 GitHub Secret。
