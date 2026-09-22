@@ -56,8 +56,8 @@ jobs:
           disable-animations: true
           script: |
             gradle -p android connectedDebugAndroidTest
-            adb pull /sdcard/Android/data/app.yesterdays.headlines/files/launch.png android/app/build/reports/launch.png
-            adb pull /sdcard/Android/data/app.yesterdays.headlines/files/splash.png android/app/build/reports/splash.png
+            adb pull /sdcard/Download/launch.png android/app/build/reports/launch.png
+            adb pull /sdcard/Download/splash.png android/app/build/reports/splash.png
       - name: Upload Android checks
         if: always()
         uses: actions/upload-artifact@v4

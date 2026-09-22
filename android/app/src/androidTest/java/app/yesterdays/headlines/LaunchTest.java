@@ -15,8 +15,15 @@ public class LaunchTest {
     private void screenshot(String name) throws Exception {
         android.graphics.Bitmap shot=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();
         assertNotNull(shot);
-        java.io.File file=new java.io.File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null),name);
-        try(java.io.FileOutputStream stream=new java.io.FileOutputStream(file)){shot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}
+        // Gradle uninstalls the test app after the run. Shared Downloads survive that cleanup.
+        android.content.ContentResolver resolver=InstrumentationRegistry.getInstrumentation().getTargetContext().getContentResolver();
+        android.content.ContentValues values=new android.content.ContentValues();
+        values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME,name);
+        values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE,"image/png");
+        values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH,"Download/");
+        android.net.Uri uri=resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);
+        assertNotNull(uri);
+        try(java.io.OutputStream stream=resolver.openOutputStream(uri)){assertNotNull(stream);shot.compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream);}
     }
     private WebView findWeb(View view) {
         if (view instanceof WebView) return (WebView)view;
