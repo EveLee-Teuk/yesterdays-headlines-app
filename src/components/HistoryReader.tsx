@@ -55,7 +55,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
         controller.signal.removeEventListener('abort', abort);
       }
     }, { isVisible: () => document.visibilityState === 'visible',
-      schedule: (callback, delay) => setTimeout(callback, delay), cancel: clearTimeout });
+      schedule: (callback, delay) => setTimeout(callback, delay), cancel: timer => clearTimeout(timer) });
     document.addEventListener('visibilitychange', refreshLoop.trigger);
     return () => {
       controller.abort(); refreshLoop.stop();
