@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowLeft, ArrowRight, Bookmark, BookOpen, CalendarDays, Check, ChevronLeft, ChevronRight, ExternalLink, RefreshCw, X } from 'lucide-react';
-import { beijingToday, dateSchema, clampReadingDate, readingDates, formatDate, parseCatalog, rolloverDate, type CatalogResult, type HistoryEvent } from '@/lib/history';
+import { beijingToday, dateSchema, clampReadingDate, readingDates, formatDate, parseHistoryResult, hasFailedCollection, mergeHistoryResults, needsHistoryRetry, startHistoryRefresh, rolloverDate, type CatalogResult, type HistoryEvent } from '@/lib/history';
 import { downloadPoster } from '@/lib/poster';
 import BrushText from '@/components/BrushText';
 
@@ -20,6 +20,7 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
   const [active, setActive] = useState<HistoryEvent | null>(null);
   const [notice, setNotice] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [connectionFailed, setConnectionFailed] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [posterPreview, setPosterPreview] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
@@ -33,18 +34,33 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
 
   useEffect(() => {
     const controller = new AbortController();
-    const update = async () => {
-      if (document.visibilityState !== 'visible') return;
+    const refreshLoop = startHistoryRefresh(async () => {
+      const request = new AbortController();
+      const abort = () => request.abort();
+      controller.signal.addEventListener('abort', abort, { once: true });
+      const timeout = setTimeout(abort, 16000);
       try {
-        const response = await fetch('/api/history', { signal: controller.signal });
-        if (!response.ok) return;
-        const value = await response.json();
-        if (value.origin === 'remote') setData({ catalog: parseCatalog(value.catalog), origin: 'remote' });
-      } catch { /* Keep the current issue on a temporary connection failure. */ }
+        const response = await fetch('/api/history', { signal: request.signal, cache: 'no-store' });
+        if (!response.ok) throw new Error(`History HTTP ${response.status}`);
+        const value = parseHistoryResult(await response.json());
+        if (controller.signal.aborted) return false;
+        setData(previous => mergeHistoryResults(previous, value));
+        setConnectionFailed(false);
+        return !needsHistoryRetry(value);
+      } catch {
+        if (!controller.signal.aborted) setConnectionFailed(true);
+        return false;
+      } finally {
+        clearTimeout(timeout);
+        controller.signal.removeEventListener('abort', abort);
+      }
+    }, { isVisible: () => document.visibilityState === 'visible',
+      schedule: (callback, delay) => setTimeout(callback, delay), cancel: clearTimeout });
+    document.addEventListener('visibilitychange', refreshLoop.trigger);
+    return () => {
+      controller.abort(); refreshLoop.stop();
+      document.removeEventListener('visibilitychange', refreshLoop.trigger);
     };
-    const timer = setInterval(update, 5 * 60 * 1000);
-    document.addEventListener('visibilitychange', update);
-    return () => { controller.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', update); };
   }, []);
 
   useEffect(() => {
@@ -135,16 +151,17 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
   async function refresh() {
     setRefreshing(true); setNotice('');
     try {
-      const response = await fetch('/api/history', { signal: AbortSignal.timeout(12000) });
+      const response = await fetch('/api/history', { signal: AbortSignal.timeout(16000), cache: 'no-store' });
       if (!response.ok) throw new Error();
-      const value = await response.json();
-      if (!['remote', 'bundled'].includes(value.origin)) throw new Error();
-      setData({ catalog: parseCatalog(value.catalog), origin: value.origin });
-      setNotice(value.origin === 'remote' ? '内容已刷新。' : '在线内容暂不可用，继续使用已核对的内置版本。');
-    } catch { setNotice('暂时无法连接，当前已载入的内容仍可阅读。'); }
+      const value = parseHistoryResult(await response.json());
+      setData(previous => mergeHistoryResults(previous, value));
+      setConnectionFailed(false);
+      setNotice(needsHistoryRetry(value) ? '部分在线资料暂不可用，已保留可读内容，将自动重试。' : '内容已刷新。');
+    } catch { setConnectionFailed(true); setNotice('暂时无法连接，当前已载入的内容仍可阅读。'); }
     finally { setRefreshing(false); }
   }
 
+  const todayCollectionFailed = hasFailedCollection(catalog, today);
   const issue = catalog.issues.find(issue => issue.date === date);
   const daily = issue?.events || [];
   const source = view === 'saved' ? eligibleEvents.filter(event => saved.includes(event.id)) : daily;
@@ -219,11 +236,11 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
               {remaining.length > 0 && <div className="more-heading"><span>继续翻阅</span><div /><small>THEN & NOW</small></div>}
               {remaining.map(event => <article className="story-row" key={event.id}><div className="row-year">{event.date.slice(0, 4)}<small>{formatDate(event.date, false)}</small></div><div className="row-content"><span className="row-category">{event.category} · {event.location}</span><h2><button onClick={() => openEvent(event)}>{event.title}</button></h2><p>{event.summary.split('\n')[0]}</p></div>{saveButton(event)}</article>)}
               {view === 'today' && <div className="end-note"><span>终</span><p>这一页，读完了。</p><button onClick={() => { setView('archive'); setCategory('全部'); }}>再翻一页<ArrowRight size={14} /></button></div>}
-            </> : <div className="empty-state"><BookOpen size={36} strokeWidth={1} /><h2>{view === 'saved' ? '这里，留给你喜欢的故事。' : category !== '全部' ? '这个分类暂时没有内容。' : !issue || issue.status === 'unavailable' ? '这一天的资料，正在等待补齐。' : '这一天，暂留一页空白。'}</h2><p>{view === 'saved' ? '点击文章旁的书签，就能把它收在这里。' : !issue || issue.status === 'unavailable' ? '采集暂未成功，稍后会自动重试。不会用其他日期的内容填补。' : '当天检索未找到通过核验的事件。我们不为填满一页而改写日期。'}</p><button className="primary-button" onClick={() => { setView('archive'); setCategory('全部'); }}>翻阅最近日报<ArrowRight size={16} /></button></div>}
+            </> : <div className="empty-state"><BookOpen size={36} strokeWidth={1} /><h2>{view === 'saved' ? '这里，留给你喜欢的故事。' : category !== '全部' ? '这个分类暂时没有内容。' : !issue || issue.status === 'unavailable' ? '这一天的资料暂不可用。' : '这一天，暂留一页空白。'}</h2><p>{view === 'saved' ? '点击文章旁的书签，就能把它收在这里。' : date === today && todayCollectionFailed ? '本次采集未通过核验，已保留上次资料。可翻阅其他日期。' : !issue || issue.status === 'unavailable' ? '尚未取得可读取的日报，请稍后刷新。已保留其他日期的可读内容。' : '当天检索未找到通过核验的事件。我们不为填满一页而改写日期。'}</p><button className="primary-button" onClick={() => { setView('archive'); setCategory('全部'); }}>翻阅最近日报<ArrowRight size={16} /></button></div>}
           </section>}
         </div>
 
-        <div className="edition-note"><span>{origin === 'bundled' ? '在线内容暂不可用，显示内置资料' : catalog.lastRun?.date === today ? '今日检索已完成' : '等待今日资料更新'} · 最近更新 {catalog.lastRun?.date || catalog.updatedAt} · 已收录 {catalog.events.length} 则</span><button disabled={refreshing} onClick={refresh}><RefreshCw size={13} className={refreshing ? 'spinning' : ''} />{refreshing ? '正在刷新' : '刷新内容'}</button></div>
+        <div className="edition-note"><span>{connectionFailed ? '连接暂时失败，保留已载入资料' : origin === 'bundled' ? '在线内容暂不可用，保留可读资料' : data.recovery?.failedDates.length ? `部分日报读取失败（${data.recovery.failedDates.length} 天），保留可读资料` : data.recovery?.indexFailed ? '目录暂不可用，已逐日读取最近日报' : todayCollectionFailed ? '今日采集未完成，保留上次资料' : catalog.lastRun?.date === today ? '今日检索已完成' : '等待今日资料更新'} · 最近更新 {catalog.lastRun?.date || catalog.updatedAt} · 已收录 {catalog.events.length} 则</span><button disabled={refreshing} onClick={refresh}><RefreshCw size={13} className={refreshing ? 'spinning' : ''} />{refreshing ? '正在刷新' : '刷新内容'}</button></div>
       </main>
       <footer className="page-footer"><span>昨日头条 <i>·</i> 你的私人历史日签</span><span>以北京时间翻页 · 以真实日期记事</span></footer>
       {notice && !active && <div className="toast" role="status">{notice}<button aria-label="关闭提示" onClick={() => setNotice('')}><X size={15} /></button></div>}

@@ -31,14 +31,22 @@ export function readingDates(today: string, days = 7): string[] {
 export function clampReadingDate(date: string, today: string, days = 7) {
   return readingDates(today, days).includes(date) ? date : today;
 }
+const lastAttemptSchema = z.object({ date: dateSchema,
+  outcome: z.enum(['ready', 'empty', 'failed', 'validation_failed', 'review_rejected']),
+  completedAt: z.string().datetime({ offset: true }) }).optional();
 const catalogSchema = z.object({ schemaVersion: z.literal(2), updatedAt: dateSchema, events: z.array(eventSchema),
   issues: z.array(issueSchema).default([]), retentionDays: z.number().int().min(1).max(31).default(7),
+  lastAttempt: lastAttemptSchema,
   lastRun: z.object({ date: dateSchema, completedAt: z.string().datetime({ offset: true }), sourceCount: z.number().int().nonnegative(), addedCount: z.number().int().nonnegative(), status: z.enum(['ready', 'empty']) }).optional(),
 })
   .refine(catalog => new Set(catalog.events.map(event => event.id)).size === catalog.events.length, '重复的事件 ID');
 export type HistoryEvent = z.infer<typeof eventSchema>;
 export type Catalog = z.infer<typeof catalogSchema>;
-export type CatalogResult = { catalog: Catalog; origin: 'remote' | 'bundled' };
+const recoverySchema = z.object({ indexFailed: z.boolean(), failedDates: z.array(dateSchema) });
+export type CatalogResult = { catalog: Catalog; origin: 'remote' | 'bundled'; recovery?: z.infer<typeof recoverySchema> };
+export function parseHistoryResult(data: unknown): CatalogResult {
+  return z.object({ catalog: catalogSchema, origin: z.enum(['remote', 'bundled']), recovery: recoverySchema.optional() }).parse(data);
+}
 export function parseCatalog(data: unknown): Catalog { return catalogSchema.parse(data); }
 export function beijingToday(now = new Date()): string {
   return new Date(now.getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -54,4 +62,101 @@ export function eventsOnDay(events: HistoryEvent[], date: string) {
 export function formatDate(date: string, withYear = true) {
   const [year, month, day] = date.split('-');
   return `${withYear ? `${year}年` : ''}${Number(month)}月${Number(day)}日`;
+}
+
+const indexSchema = z.object({ schemaVersion: z.literal(1), today: dateSchema, updatedAt: dateSchema,
+  retentionDays: z.number().int().min(1).max(31), dates: z.array(dateSchema), lastRun: catalogSchema.innerType().shape.lastRun,
+  lastAttempt: lastAttemptSchema })
+  .refine(index => JSON.stringify(index.dates) === JSON.stringify(readingDates(index.today, index.retentionDays)), 'Invalid archive window');
+
+// Inject only the network boundary so the same validation runs in production and tests.
+export async function loadReviewedHistory(read: (path: string) => Promise<unknown>, bundled: unknown, today: string,
+  report: (path: string, reason: string) => void): Promise<CatalogResult> {
+  const fallback = parseCatalog(bundled);
+  let index: z.infer<typeof indexSchema> | undefined;
+  let indexFailed = false;
+  try {
+    index = indexSchema.parse(await read('archive_index.json'));
+    if (index.today !== today) throw new Error(`Stale archive index: ${index.today}; expected ${today}`);
+  } catch (error) {
+    index = undefined; indexFailed = true;
+    report('archive_index.json', error instanceof Error ? error.message : 'Invalid index');
+  }
+  const dates = readingDates(today, index?.retentionDays ?? 7);
+  const results = await Promise.all(dates.map(async date => {
+    const path = `archives/${date}.json`;
+    try {
+      const issue = parseIssue(await read(path));
+      if (issue.date !== date) throw new Error('Archive filename/date mismatch');
+      if (new Set(issue.events.map(event => event.id)).size !== issue.events.length) throw new Error('Duplicate event ID');
+      return { issue, failed: false };
+    } catch (error) {
+      report(path, error instanceof Error ? error.message : 'Invalid archive');
+      const events = eventsOnDay(fallback.events, date);
+      return { issue: parseIssue({ schemaVersion: 2, timezone: 'Asia/Shanghai', date,
+        status: events.length ? 'ready' : 'unavailable', events }), failed: true };
+    }
+  }));
+  // IDs must also be unique across separate day files. Isolate a conflicting day.
+  const seen = new Set<string>();
+  for (const result of results) {
+    if (result.issue.events.some(event => seen.has(event.id))) {
+      report(`archives/${result.issue.date}.json`, 'Duplicate event ID across archives');
+      result.issue = { ...result.issue, status: 'unavailable', events: [] }; result.failed = true;
+    }
+    result.issue.events.forEach(event => seen.add(event.id));
+  }
+  const issues = results.map(result => result.issue);
+  return { origin: results.some(result => !result.failed) ? 'remote' : 'bundled',
+    catalog: parseCatalog({ schemaVersion: 2, updatedAt: index?.updatedAt ?? fallback.updatedAt,
+      retentionDays: dates.length, issues, events: issues.flatMap(issue => issue.events),
+      ...(index?.lastRun ? { lastRun: index.lastRun } : {}), ...(index?.lastAttempt ? { lastAttempt: index.lastAttempt } : {}) }),
+    recovery: { indexFailed, failedDates: results.filter(result => result.failed).map(result => result.issue.date) } };
+}
+
+export function hasFailedCollection(catalog: Catalog, date: string) {
+  return catalog.lastAttempt?.date === date && !['ready', 'empty'].includes(catalog.lastAttempt.outcome);
+}
+
+export function needsHistoryRetry(result: CatalogResult) {
+  return result.origin === 'bundled' || !!result.recovery?.indexFailed || !!result.recovery?.failedDates.length
+    || result.catalog.issues.some(issue => issue.status === 'unavailable');
+}
+
+export function mergeHistoryResults(previous: CatalogResult, next: CatalogResult): CatalogResult {
+  const issues = next.catalog.issues.map(issue => {
+    const old = previous.catalog.issues.find(day => day.date === issue.date);
+    return old && old.status !== 'unavailable' && (issue.status === 'unavailable' || next.recovery?.failedDates.includes(issue.date)) ? old : issue;
+  });
+  return { ...next, catalog: parseCatalog({ ...next.catalog, issues, events: issues.flatMap(issue => issue.events) }) };
+}
+
+// Three bounded recovery attempts, then normal polling. A visibility change starts a fresh cycle.
+export function startHistoryRefresh(update: () => Promise<boolean>, options: {
+  isVisible: () => boolean;
+  schedule: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>;
+  cancel: (timer: ReturnType<typeof setTimeout>) => void;
+}) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let stopped = false, running = false, retries = 0;
+  const normalDelay = 5 * 60 * 1000;
+  const retryDelays = [3000, 15000, 45000];
+  const run = async () => {
+    if (stopped || running) return;
+    if (timer !== undefined) options.cancel(timer);
+    if (!options.isVisible()) { timer = options.schedule(run, normalDelay); return; }
+    running = true;
+    let healthy = false;
+    try { healthy = await update(); } catch { /* The reader retains its last valid data. */ }
+    running = false;
+    if (stopped) return;
+    const delay = !healthy && retries < retryDelays.length ? retryDelays[retries++] : normalDelay;
+    if (healthy || delay === normalDelay) retries = 0;
+    timer = options.schedule(run, delay);
+  };
+  void run();
+  return { trigger: () => { retries = 0; void run(); }, stop: () => {
+    stopped = true;
+    if (timer !== undefined) options.cancel(timer);
+  } };
 }
