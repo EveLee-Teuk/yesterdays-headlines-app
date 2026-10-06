@@ -15,6 +15,7 @@ for (const failure of ['timeout', '404', 'schema']) {
     const warnings = [];
     const result = await history.loadReviewedHistory(async path => {
       if (path === 'archive_index.json') return index;
+      if (path.startsWith('prepared/')) throw new Error('No prepared issue');
       const date = path.slice(9, -5);
       if (date === dates[2]) {
         if (failure === 'schema') return { ...issue(date), events: [fixture.events[0]], status: 'ready' };
@@ -36,13 +37,14 @@ for (const problem of ['offline', 'stale', 'malformed']) {
     const requested = [];
     const result = await history.loadReviewedHistory(async path => {
       requested.push(path);
+      if (path.startsWith('prepared/')) throw new Error('No prepared issue');
       if (path === 'archive_index.json') {
         if (problem === 'offline') throw new Error('offline');
         return problem === 'stale' ? { ...index, today: '2026-09-21', dates: history.readingDates('2026-09-21') } : {};
       }
       return issue(path.slice(9, -5));
     }, fixture, today, () => {});
-    assert.deepEqual(requested.slice(1).sort(), dates.map(date => `archives/${date}.json`).sort());
+    assert.deepEqual(requested.filter(path => path.startsWith('archives/')).sort(), dates.map(date => `archives/${date}.json`).sort());
     assert.equal(result.catalog.events.length, 1);
     assert.equal(result.recovery.indexFailed, true);
   });
@@ -94,9 +96,11 @@ test('client refresh starts immediately, retries finitely, then returns to five-
 test('current failed collection status survives loading without triggering network recovery', async () => {
   const lastAttempt = { date: today, outcome: 'validation_failed', completedAt: '2026-09-22T11:00:00+08:00' };
   const lastRun = { date: today, completedAt: '2026-09-22T01:00:00+08:00', sourceCount: 3, addedCount: 0, status: 'empty' };
-  const result = await history.loadReviewedHistory(async path => path === 'archive_index.json'
-    ? { ...index, lastRun, lastAttempt }
-    : { ...issue(path.slice(9, -5)), status: 'empty', events: [] }, fixture, today, () => {});
+  const result = await history.loadReviewedHistory(async path => {
+    if (path === 'archive_index.json') return { ...index, lastRun, lastAttempt };
+    if (path.startsWith('prepared/')) return { ...issue(today), status: 'empty', events: [] };
+    return { ...issue(path.slice(9, -5)), status: 'empty', events: [] };
+  }, fixture, today, () => {});
   assert.deepEqual(result.catalog.lastAttempt, lastAttempt);
   assert.equal(history.hasFailedCollection(result.catalog, today), true);
   assert.equal(history.needsHistoryRetry(result), false);

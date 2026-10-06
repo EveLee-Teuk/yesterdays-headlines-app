@@ -69,10 +69,49 @@ const indexSchema = z.object({ schemaVersion: z.literal(1), today: dateSchema, u
   lastAttempt: lastAttemptSchema })
   .refine(index => JSON.stringify(index.dates) === JSON.stringify(readingDates(index.today, index.retentionDays)), 'Invalid archive window');
 
+// Match the data collector's reusable-evidence contract for prepared issues.
+// Published archives retain their existing compatibility with reviewed legacy data.
+const preparedSourceHosts = ['gov.cn', 'cas.cn', 'news.cn', 'xinhuanet.com', 'people.com.cn', 'cmse.gov.cn',
+  'cnsa.gov.cn', 'cctv.com', 'chinanews.com', 'gmw.cn', 'edu.cn', 'wto.org', 'un.org'];
+function checkPreparedReview(issue: z.infer<typeof issueSchema>, today: string) {
+  for (const event of issue.events) {
+    if (event.verification !== 'source-matched' || event.date >= today || event.reviewedAt > today) {
+      throw new Error('Prepared event is not a reviewed historical event');
+    }
+    const [year, month, day] = event.date.split('-').map(Number);
+    const datedEvent = new RegExp('(?<!\\d)(?:' + year + '\\s*年\\s*0?' + month + '\\s*月\\s*0?' + day + '\\s*日'
+      + '|' + year + '\\s*-\\s*0?' + month + '\\s*-\\s*0?' + day + '(?!\\d)'
+      + '|' + year + '\\s*\\.\\s*0?' + month + '\\s*\\.\\s*0?' + day + '(?!\\d))');
+    for (const source of event.sources) {
+      const url = new URL(source.url);
+      const evidence = source.evidence;
+      const length = evidence ? [...evidence].length : 0;
+      if (url.port || !preparedSourceHosts.some(host => url.hostname === host || url.hostname.endsWith('.' + host))
+        || !evidence || length < 18 || length > 160 || !datedEvent.test(evidence)
+        || /发布时间|发布日期|更新时间|责任编辑|浏览次数/.test(evidence)) {
+        throw new Error('Prepared event lacks approved dated source evidence');
+      }
+    }
+  }
+}
+
 // Inject only the network boundary so the same validation runs in production and tests.
 export async function loadReviewedHistory(read: (path: string) => Promise<unknown>, bundled: unknown, today: string,
   report: (path: string, reason: string) => void): Promise<CatalogResult> {
   const fallback = parseCatalog(bundled);
+  const readIssue = async (path: string, date: string) => {
+    const issue = parseIssue(await read(path));
+    if (issue.date !== date) throw new Error('Archive filename/date mismatch');
+    if (new Set(issue.events.map(event => event.id)).size !== issue.events.length) throw new Error('Duplicate event ID');
+    return issue;
+  };
+  // Prefetch only today's reviewed reserve. Handle rejection immediately even if
+  // a ready archive wins, so an optional timeout cannot become unhandled.
+  const preparedPath = `prepared/${today}.json`;
+  const preparedToday = readIssue(preparedPath, today).then(issue => {
+    checkPreparedReview(issue, today);
+    return { issue, error: undefined };
+  }).catch(error => ({ issue: undefined, error: error instanceof Error ? error.message : 'Invalid prepared issue' }));
   let index: z.infer<typeof indexSchema> | undefined;
   let indexFailed = false;
   try {
@@ -86,9 +125,7 @@ export async function loadReviewedHistory(read: (path: string) => Promise<unknow
   const results = await Promise.all(dates.map(async date => {
     const path = `archives/${date}.json`;
     try {
-      const issue = parseIssue(await read(path));
-      if (issue.date !== date) throw new Error('Archive filename/date mismatch');
-      if (new Set(issue.events.map(event => event.id)).size !== issue.events.length) throw new Error('Duplicate event ID');
+      const issue = await readIssue(path, date);
       return { issue, failed: false };
     } catch (error) {
       report(path, error instanceof Error ? error.message : 'Invalid archive');
@@ -97,7 +134,8 @@ export async function loadReviewedHistory(read: (path: string) => Promise<unknow
         status: events.length ? 'ready' : 'unavailable', events }), failed: true };
     }
   }));
-  // IDs must also be unique across separate day files. Isolate a conflicting day.
+  // IDs must also be unique across separate day files. Isolate a conflicting day
+  // before deciding whether today's archive needs the reviewed reserve.
   const seen = new Set<string>();
   for (const result of results) {
     if (result.issue.events.some(event => seen.has(event.id))) {
@@ -105,6 +143,23 @@ export async function loadReviewedHistory(read: (path: string) => Promise<unknow
       result.issue = { ...result.issue, status: 'unavailable', events: [] }; result.failed = true;
     }
     result.issue.events.forEach(event => seen.add(event.id));
+  }
+  const current = results.find(result => result.issue.date === today);
+  if (current && (current.failed || current.issue.status !== 'ready')) {
+    const { issue: prepared, error } = await preparedToday;
+    if (error !== undefined) {
+      report(preparedPath, error);
+      current.failed = true;
+    }
+    if (prepared?.status === 'ready') {
+      const otherIds = new Set(results.filter(result => result !== current).flatMap(result => result.issue.events.map(event => event.id)));
+      if (prepared.events.some(event => otherIds.has(event.id))) {
+        report(preparedPath, 'Duplicate event ID across archives');
+        current.failed = true;
+      } else {
+        current.issue = prepared; current.failed = false;
+      }
+    }
   }
   const issues = results.map(result => result.issue);
   return { origin: results.some(result => !result.failed) ? 'remote' : 'bundled',
