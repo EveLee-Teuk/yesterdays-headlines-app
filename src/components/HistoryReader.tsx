@@ -230,8 +230,10 @@ export function HistoryReader({ initial, initialDate }: { initial: CatalogResult
                 <p className="lead-summary">{featured.summary.split('\n')[0]}</p>
                 <div className="story-foot"><span><Check size={14} />来源：{featured.sources[0].name}</span><button className="read-link" onClick={() => openEvent(featured)}>读这一页<ArrowRight size={17} /></button></div>
               </article>
-              {remaining.length > 0 && <div className="more-heading"><span>继续翻阅</span><div /></div>}
-              {remaining.map(event => <article className="story-row" key={event.id}><div className="row-year">{event.date.slice(0, 4)}<small>{formatDate(event.date, false)}</small></div><div className="row-content"><span className="row-category">{event.category} · {event.location}</span><h2><button onClick={() => openEvent(event)}>{event.title}</button></h2><p>{event.summary.split('\n')[0]}</p></div>{saveButton(event)}</article>)}
+              {remaining.length > 0 && <section className="more-stories" aria-label="继续翻阅">
+                <div className="more-heading"><span>继续翻阅</span><div /></div>
+                {remaining.map(event => <article className="story-row" key={event.id}><div className="row-year">{event.date.slice(0, 4)}<small>{formatDate(event.date, false)}</small></div><div className="row-content"><span className="row-category">{event.category} · {event.location}</span><h2><button onClick={() => openEvent(event)}>{event.title}</button></h2><p>{event.summary.split('\n')[0]}</p></div>{saveButton(event)}</article>)}
+              </section>}
               {view === 'today' && <div className="end-note"><span>终</span><p>这一页，读完了。</p><button onClick={() => { setView('archive'); setCategory('全部'); }}>再翻一页<ArrowRight size={14} /></button></div>}
             </> : <div className="empty-state"><BookOpen size={36} strokeWidth={1} /><h2>{view === 'saved' ? '这里，留给你喜欢的故事。' : category !== '全部' ? '这个分类暂时没有内容。' : !issue || issue.status === 'unavailable' ? '这一天的资料暂不可用。' : '这一天，暂留一页空白。'}</h2><p>{view === 'saved' ? '点击文章旁的书签，就能把它收在这里。' : date === today && todayCollectionFailed ? '本次采集未通过核验，已保留上次资料。可翻阅其他日期。' : !issue || issue.status === 'unavailable' ? '尚未取得可读取的日报，请稍后刷新。已保留其他日期的可读内容。' : '当天检索未找到通过核验的事件。我们不为填满一页而改写日期。'}</p><button className="primary-button" onClick={() => { setView('archive'); setCategory('全部'); }}>翻阅最近日报<ArrowRight size={16} /></button></div>}
           </section>}
