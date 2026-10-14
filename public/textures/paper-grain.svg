@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-  <filter id="fiber" x="0" y="0" width="100%" height="100%">
-    <feTurbulence type="fractalNoise" baseFrequency=".72 .43" numOctaves="3" seed="17" stitchTiles="stitch"/>
-    <feColorMatrix type="saturate" values="0"/>
-    <feComponentTransfer><feFuncR type="table" tableValues=".29 .78"/><feFuncG type="table" tableValues=".21 .71"/><feFuncB type="table" tableValues=".12 .57"/><feFuncA type="table" tableValues=".16 .02"/></feComponentTransfer>
-  </filter>
-  <rect width="240" height="240" filter="url(#fiber)"/>
-</svg>

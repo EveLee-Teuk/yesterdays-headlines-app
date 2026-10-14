@@ -25,7 +25,7 @@
   --input: 50 14% 83%; --ring: 10 55% 42%; --radius: 0;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); background-image: url('/textures/paper-grain.svg'), linear-gradient(105deg, #b6955d0a, transparent 45%, #b6955d0c); background-size: 240px 240px, 100% 100%; color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; font-size: 16px; }
+body { margin: 0; background: var(--paper); background-image: linear-gradient(#f2eadb99, #f2eadb99), url('/textures/reading-paper-photo-v1.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; font-size: 16px; }
 button, input { font: inherit; }
 button { cursor: pointer; border: 0; background: none; color: inherit; padding: 0; transition: color .2s, background .2s, border-color .2s; }
 button:disabled { cursor: not-allowed; opacity: .35; }
@@ -55,9 +55,10 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .daily-grid { padding-top: 30px; }
 .calendar-column { padding-top: 0; min-width: 0; }
 .date-leaf { text-align: center; position: relative; padding: 48px 18px 10px; border: 1px solid #a47e58; background-color: var(--sheet); box-shadow: var(--calendar-shadow); }
-.date-leaf, .lead-story, .reader-dialog { background-image: url('/textures/paper-grain.svg'), url('/textures/paper-creases.svg'), radial-gradient(ellipse at center, transparent 42%, #a97a3514 100%); background-size: 240px 240px, 100% 100%, 100% 100%; }
+.date-leaf { background-image: url('/textures/calendar-paper-photo-v1.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; }
+.lead-story, .reader-dialog { background-image: url('/textures/reading-paper-photo-v1.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; }
 .date-leaf::after { content: ''; position: absolute; left: 10px; right: 10px; top: 36px; border-top: 1px dashed #b4946d; pointer-events: none; }
-.calendar-binding { position: absolute; top: -1px; left: -1px; right: -1px; height: 28px; background: #974b36 url('/textures/paper-grain.svg'); display: flex; justify-content: space-around; align-items: center; border-bottom: 1px solid #713e2d; }
+.calendar-binding { position: absolute; top: -1px; left: -1px; right: -1px; height: 28px; background: #974b36; display: flex; justify-content: space-around; align-items: center; border-bottom: 1px solid #713e2d; }
 .calendar-binding i { display: block; width: 19px; height: 19px; border-radius: 50%; border: 4px solid #cdb58b; outline: 1px solid #795a3e; background: #6a5b43; box-shadow: var(--hole-shadow); }
 .leaf-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--red); padding-bottom: 12px; border-bottom: 3px double #b98970; }
 .leaf-top h1 { margin: 0; font: 500 18px/1.5 var(--serif); }
@@ -102,7 +103,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .story-foot > span { display: flex; align-items: center; gap: 7px; font-size: 16px; color: var(--muted); line-height: 1.8; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .story-foot > span svg { stroke-width: 1.3; flex-shrink: 0; }
 .read-link { display: flex; align-items: center; gap: 12px; font-size: 16px; color: var(--red); white-space: nowrap; min-height: 44px; }
-.more-stories { margin-top: 36px; padding: 24px 28px 28px; background: #e7e8db; background-image: url('/textures/paper-grain.svg'), url('/textures/paper-creases.svg'); background-size: 240px 240px, 100% 100%; border: 1px solid #b9bda8; border-top: 2px solid #66765c; }
+.more-stories { margin-top: 36px; padding: 24px 28px 28px; background: #e7e8db; background-image: linear-gradient(#e3e8dbda, #e3e8dbda), url('/textures/reading-paper-photo-v1.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; border: 1px solid #b9bda8; border-top: 2px solid #66765c; }
 .more-heading { display: flex; align-items: center; gap: 16px; margin: 0 0 6px; font: 18px var(--serif); color: #4d6046; }
 .more-heading div { border-top: 1px solid #cbd3c3; flex: 1; }
 .story-row { display: flex; align-items: flex-start; gap: 26px; padding: 28px 0; border-bottom: 1px solid #cbd3c3; }
