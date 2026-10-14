@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="1120" viewBox="0 0 840 1120" fill="none">
+  <defs>
+    <filter id="soft" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur stdDeviation="2.5"/></filter>
+    <path id="folds" d="M-30 184 176 268 371 338 593 456 868 510 M176 268 228 78 243-24 M371 338 343 564 404 781 366 1153 M-22 716 180 641 343 564 608 618 868 704 M608 618 593 456 665 228 703-15 M180 641 143 856 50 1147 M404 781 603 918 859 1030 M603 918 608 618"/>
+    <path id="creases" d="m22 418 122 18 117 62 82 66 m250-108 130-47 123 22 M50 1147 178 970 273 904 404 781 M243-24l92 144 36 218 m237 280 116-93 131-15"/>
+  </defs>
+  <use href="#folds" stroke="#745236" stroke-opacity=".08" stroke-width="15" filter="url(#soft)"/>
+  <use href="#folds" stroke="#fffdf2" stroke-opacity=".42" stroke-width="3" transform="translate(3 -2)"/>
+  <use href="#folds" stroke="#7f5d3d" stroke-opacity=".12" stroke-width="1.2"/>
+  <use href="#creases" stroke="#fffdf2" stroke-opacity=".24" stroke-width="2" transform="translate(2 -1)"/>
+  <use href="#creases" stroke="#8b6848" stroke-opacity=".08" stroke-width=".8"/>
+</svg>
