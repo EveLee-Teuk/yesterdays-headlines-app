@@ -64,6 +64,10 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .leaf-top h1 { margin: 0; font: 500 18px/1.5 var(--serif); }
 .leaf-top > span { font-size: 16px; white-space: nowrap; }
 .calendar-face { position: relative; padding: 12px 0 16px; overflow: hidden; overflow: clip; }
+.calendar-pages { position: relative; perspective: 1000px; overflow: hidden; overflow: clip; }
+.calendar-turning-face { position: absolute; inset: 0; visibility: hidden; opacity: 0; z-index: 2; pointer-events: none; backface-visibility: hidden; background: var(--sheet) url('/textures/calendar-paper-photo-v1.webp') center / cover no-repeat; }
+.swipe-surface { touch-action: pan-y; touch-action: pan-y pinch-zoom; }
+.swipe-surface:focus-visible { outline: 2px solid var(--red); outline-offset: 6px; }
 .turn-shadow { position: absolute; inset: 0; opacity: 0; background: linear-gradient(110deg, transparent 18%, #60462b 52%, transparent 84%); pointer-events: none; z-index: 1; }
 .big-day { display: block; font: 400 124px/1 Georgia, serif; letter-spacing: -6px; color: var(--red); }
 .lunar-meta { min-height: 58px; margin-top: 8px; color: #5b4838; }
@@ -94,7 +98,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .story-era > span { font: italic 38px/1 Georgia, serif; color: var(--red); letter-spacing: -1.8px; }
 .story-era small { font-size: 16px; color: var(--muted); letter-spacing: 0; }
 .lead-story h2 { font: 400 clamp(44px, 5vw, 68px)/1.24 var(--brush); margin: 0 0 27px; letter-spacing: 1px; text-wrap: balance; overflow-wrap: anywhere; }
-.lead-story h2 button, .story-row h2 button { font: inherit; padding: 0; text-align: left; letter-spacing: inherit; }
+.lead-story h2 button { font: inherit; padding: 0; text-align: left; letter-spacing: inherit; }
 .brush-text[data-font-state="loading"] { background: #e8e4d9; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .brush-text[data-font-state="loading"] .brush-glyphs { opacity: 0; }
 .brush-text[data-font-state="fallback"] { font-family: 'Songti SC', SimSun, serif; }
@@ -103,17 +107,20 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .story-foot > span { display: flex; align-items: center; gap: 7px; font-size: 16px; color: var(--muted); line-height: 1.8; max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
 .story-foot > span svg { stroke-width: 1.3; flex-shrink: 0; }
 .read-link { display: flex; align-items: center; gap: 12px; font-size: 16px; color: var(--red); white-space: nowrap; min-height: 44px; }
-.more-stories { margin-top: 36px; padding: 24px 28px 28px; background: #e7e8db; background-image: linear-gradient(#e3e8dbda, #e3e8dbda), url('/textures/reading-paper-photo-v1.webp'); background-size: cover; background-position: center; background-repeat: no-repeat; border: 1px solid #b9bda8; border-top: 2px solid #66765c; }
-.more-heading { display: flex; align-items: center; gap: 16px; margin: 0 0 6px; font: 18px var(--serif); color: #4d6046; }
-.more-heading div { border-top: 1px solid #cbd3c3; flex: 1; }
-.story-row { display: flex; align-items: flex-start; gap: 26px; padding: 28px 0; border-bottom: 1px solid #cbd3c3; }
-.story-row:last-child { border-bottom: 0; padding-bottom: 0; }
-.row-year { font: italic 29px Georgia, serif; min-width: 69px; color: var(--red); }
-.row-year small { display: block; font: 16px var(--sans); margin-top: 9px; color: var(--muted); }
-.row-content { flex: 1; min-width: 0; }
-.row-category { font-size: 16px; color: var(--muted); line-height: 1.7; }
-.story-row h2 { font: 500 26px/1.65 var(--serif); margin: 9px 0 11px; text-wrap: pretty; }
-.row-content p { font: 18px/1.9 var(--serif); margin: 0; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.story-book { min-width: 0; }
+.book-stack { position: relative; isolation: isolate; perspective: 1500px; }
+.book-page { z-index: 1; backface-visibility: hidden; }
+.book-underpages { position: absolute; inset: 0; pointer-events: none; }
+.book-underpages i { position: absolute; inset: 0; border: 1px solid #b79b76; background: var(--sheet) url('/textures/reading-paper-photo-v1.webp') center / cover no-repeat; }
+.book-underpages i:first-child { transform: translate(8px, 12px); }
+.book-underpages i:last-child { transform: translate(4px, 6px); }
+.turning-page { position: absolute; top: 0; left: 0; width: 100%; z-index: 3; pointer-events: none; backface-visibility: hidden; user-select: none; }
+.turning-page .story-topline > .save-button { margin-left: auto; }
+.book-turn-shadow { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: linear-gradient(90deg, #382c1b, transparent 80%); }
+.book-navigation { display: grid; grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr); gap: 8px; align-items: center; padding: 24px 0 4px; }
+.book-navigation button { display: flex; align-items: center; gap: 8px; min-height: 48px; font-size: 16px; color: var(--red); white-space: nowrap; }
+.book-navigation button:last-child { justify-content: flex-end; }
+.book-position { text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--muted); }
 .end-note { text-align: center; padding: 41px 0 6px; }
 .end-note > span { font: 400 20px var(--brush); color: var(--red); border: 1px solid #c6a38f; padding: 3px 4px; }
 .end-note p { font: 18px/1.8 var(--serif); letter-spacing: 1px; color: var(--muted); margin: 21px 0 18px; }
@@ -173,11 +180,6 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .archive-day { grid-template-columns: 90px minmax(0, 1fr) 22px; gap: 14px; }
   .archive-date strong { font-size: 52px; }
   .archive-copy > span { font-size: 22px; }
-  .story-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 12px; }
-  .row-year { display: flex; align-items: baseline; gap: 12px; grid-column: 1; }
-  .row-year small { margin-top: 0; }
-  .row-content { grid-column: 1 / -1; grid-row: 2; }
-  .story-row > .save-button { grid-column: 2; grid-row: 1; }
 }
 @media (max-width: 640px) {
   .paper-app { padding: 0 22px; }
@@ -202,10 +204,6 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
   .lead-summary, .article-body p { font-size: 19px; line-height: 1.95; }
   .lead-summary { margin-bottom: 28px; }
   .story-foot { padding: 16px 0; gap: 8px 20px; }
-  .more-stories { margin-top: 28px; padding: 20px 18px 24px; }
-  .story-row { padding: 24px 0; }
-  .row-year { font-size: 32px; }
-  .story-row h2 { font-size: 25px; line-height: 1.55; margin: 8px 0 14px; }
   .end-note { padding-top: 36px; }
   .archive-days { grid-template-columns: 1fr; }
   .archive-day { grid-template-columns: minmax(0, 1fr) 24px; gap: 14px; min-height: 140px; padding: 24px 0; }
