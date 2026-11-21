@@ -42,7 +42,7 @@ jobs:
           mkdir -p delivery android/app/build/reports
           printf 'Release signature matches v1.0.1: %s\n' "$NEW_CERT" > android/app/build/reports/signature-check.txt
           cp android/app/build/outputs/apk/release/app-release.apk delivery/yesterday-headlines-1.0.2.apk
-          sha256sum delivery/*.apk > delivery/SHA256SUMS.txt
+          (cd delivery && sha256sum *.apk > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
           name: yesterday-headlines-apk
@@ -64,7 +64,11 @@ jobs:
             gradle -p android connectedDebugAndroidTest
             adb pull /sdcard/Download/launch.png android/app/build/reports/launch.png
             adb pull /sdcard/Download/splash.png android/app/build/reports/splash.png
-            adb shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:app.yesterdays.headlines
+            adb uninstall app.yesterdays.headlines || true
+            adb install public/downloads/yesterday-headlines-1.0.1.apk > android/app/build/reports/upgrade-check.txt
+            adb install -r android/app/build/outputs/apk/release/app-release.apk >> android/app/build/reports/upgrade-check.txt
+            adb shell dumpsys package app.yesterdays.headlines | grep 'versionName=1.0.2' >> android/app/build/reports/upgrade-check.txt
+            adb shell am start -W -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:app.yesterdays.headlines
             sleep 2
             adb shell screencap -p /sdcard/Download/app-icon.png
             adb pull /sdcard/Download/app-icon.png android/app/build/reports/app-icon.png
