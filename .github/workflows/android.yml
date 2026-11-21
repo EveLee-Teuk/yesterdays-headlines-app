@@ -33,9 +33,15 @@ jobs:
         run: gradle testDebugUnitTest lintRelease assembleRelease assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Verify signature
         run: |
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
-          mkdir -p delivery
-          cp android/app/build/outputs/apk/release/app-release.apk delivery/yesterday-headlines-1.0.1.apk
+          SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$SIGNER" verify --verbose --print-certs android/app/build/outputs/apk/release/app-release.apk
+          OLD_CERT=$("$SIGNER" verify --print-certs public/downloads/yesterday-headlines-1.0.1.apk | sed -n 's/Signer #1 certificate SHA-256 digest: //p')
+          NEW_CERT=$("$SIGNER" verify --print-certs android/app/build/outputs/apk/release/app-release.apk | sed -n 's/Signer #1 certificate SHA-256 digest: //p')
+          test -n "$OLD_CERT"
+          test "$OLD_CERT" = "$NEW_CERT"
+          mkdir -p delivery android/app/build/reports
+          printf 'Release signature matches v1.0.1: %s\n' "$NEW_CERT" > android/app/build/reports/signature-check.txt
+          cp android/app/build/outputs/apk/release/app-release.apk delivery/yesterday-headlines-1.0.2.apk
           sha256sum delivery/*.apk > delivery/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
@@ -58,6 +64,10 @@ jobs:
             gradle -p android connectedDebugAndroidTest
             adb pull /sdcard/Download/launch.png android/app/build/reports/launch.png
             adb pull /sdcard/Download/splash.png android/app/build/reports/splash.png
+            adb shell am start -a android.settings.APPLICATION_DETAILS_SETTINGS -d package:app.yesterdays.headlines
+            sleep 2
+            adb shell screencap -p /sdcard/Download/app-icon.png
+            adb pull /sdcard/Download/app-icon.png android/app/build/reports/app-icon.png
       - name: Upload Android checks
         if: always()
         uses: actions/upload-artifact@v4

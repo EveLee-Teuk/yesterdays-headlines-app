@@ -97,10 +97,12 @@ public class MainActivity extends Activity {
     }
     private void buildCover(FrameLayout root) {
         cover = new LinearLayout(this); cover.setOrientation(LinearLayout.VERTICAL); cover.setGravity(Gravity.CENTER); cover.setPadding(32,32,32,32); cover.setBackgroundColor(PAPER);
-        TextView edition = label("YOUR DAILY HISTORY",10,Color.GRAY); edition.setLetterSpacing(.3f); cover.addView(edition);
-        TextView title = label("昨日\n头条",82,INK);
+        ImageView logo = new ImageView(this); logo.setImageResource(R.drawable.brand_mark); logo.setContentDescription(getString(R.string.app_name)); logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int logoSize = Math.round(96 * getResources().getDisplayMetrics().density);
+        cover.addView(logo,new LinearLayout.LayoutParams(logoSize,logoSize));
+        TextView title = label("昨日头条",56,INK);
         try { title.setTypeface(Typeface.createFromAsset(getAssets(),"brush.ttf")); } catch (RuntimeException ignored) { title.setTypeface(Typeface.SERIF); }
-        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-2,-2); titleParams.setMargins(0,48,0,20); cover.addView(title,titleParams);
+        LinearLayout.LayoutParams titleParams = new LinearLayout.LayoutParams(-2,-2); titleParams.setMargins(0,32,0,20); cover.addView(title,titleParams);
         TextView seal = label("日 签",16,RED);
         GradientDrawable border = new GradientDrawable(); border.setColor(PAPER); border.setStroke(2,RED); seal.setBackground(border); seal.setTypeface(title.getTypeface()); seal.setPadding(14,8,14,8); seal.setRotation(-4); cover.addView(seal,new LinearLayout.LayoutParams(-2,-2));
         TextView motto = label("翻过日历，读到历史。",16,Color.GRAY); motto.setPadding(0,30,0,24); cover.addView(motto);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { prepareBrushText } from '@/lib/brush-font';
 
 export default function LaunchScreen() {
@@ -33,7 +34,7 @@ export default function LaunchScreen() {
   }, [dismiss]);
   if (!visible) return null;
   return <div className="launch-screen" role="dialog" aria-label="昨日头条开屏" onKeyDown={event => { if (event.key === 'Escape') dismiss(); }}>
-    <div className="launch-center"><span className="launch-seal">日签</span><p className="launch-title">昨日<br />头条</p><span className="launch-rule" /><p className="launch-motto">翻过日历，读到历史。</p></div>
+    <div className="launch-center"><Image className="launch-logo" src="/branding/daily-history.png" alt="" width={84} height={84} priority unoptimized /><p className="launch-title">昨日<br />头条</p><span className="launch-rule" /><p className="launch-motto">翻过日历，读到历史。</p></div>
     <button className="launch-skip" onClick={dismiss} autoFocus>翻开今日 →</button>
   </div>;
 }
